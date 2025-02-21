@@ -1,6 +1,6 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
-const chromium = require("chrome-aws-lambda");
+const chromium = require("@sparticuz/chromium");
 const puppeteer = require("puppeteer-core");
 
 async function fetchRecipe(url) {
@@ -10,15 +10,10 @@ async function fetchRecipe(url) {
         if (url.includes("foodnetwork.com")) {
             console.log("Using Puppeteer for:", url);
 
-            // Launch Puppeteer with Chrome AWS Lambda
+            // Launch Puppeteer with custom Chromium
             const browser = await puppeteer.launch({
-                args: [
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--single-process"
-                ],
-                executablePath: await chromium.executablePath,
+                args: chromium.args,
+                executablePath: await chromium.executablePath(),
                 headless: true
             });
 
@@ -30,7 +25,7 @@ async function fetchRecipe(url) {
             );
 
             // Navigate to the page & wait
-            await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
 
             // Extract ingredients
             ingredients = await page.evaluate(() => {
