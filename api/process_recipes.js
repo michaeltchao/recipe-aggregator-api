@@ -1,7 +1,9 @@
+require("dotenv").config();
+
 const axios = require("axios");
 const cheerio = require("cheerio");
 
-const SPOONACULAR_API_KEY = "9b42a968ad3d4188942dc950d8783954"; // Replace this with your real API key
+const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
 
 async function fetchRecipe(url) {
     try {
