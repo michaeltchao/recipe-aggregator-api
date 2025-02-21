@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/process_recipes.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/process_recipes", "dest": "api/process_recipes.js" }
+  ]
+}
