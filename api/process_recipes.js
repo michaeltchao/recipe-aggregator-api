@@ -1,6 +1,7 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
-const puppeteer = require('puppeteer');
+const axios = require("axios");
+const cheerio = require("cheerio");
+const chromium = require("chrome-aws-lambda");
+const puppeteer = require("puppeteer-core");
 
 async function fetchRecipe(url) {
     try {
@@ -9,12 +10,19 @@ async function fetchRecipe(url) {
         if (url.includes("foodnetwork.com")) {
             console.log("Using Puppeteer for:", url);
 
-            // Launch Puppeteer in headless mode
-            const browser = await puppeteer.launch({ headless: "new" });
+            // Launch Puppeteer with Chrome AWS Lambda
+            const browser = await puppeteer.launch({
+                args: chromium.args,
+                executablePath: await chromium.executablePath,
+                headless: chromium.headless
+            });
+
             const page = await browser.newPage();
 
             // Set User-Agent to avoid detection
-            await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            await page.setUserAgent(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            );
             await page.goto(url, { waitUntil: "domcontentloaded" });
 
             // Extract ingredients
@@ -41,13 +49,13 @@ async function fetchRecipe(url) {
             const $ = cheerio.load(html);
 
             const selectors = [
-                'li.ingredient',
-                '.recipe-ingredients li',
-                '.wprm-recipe-ingredient',
-                '.tasty-recipes-ingredients li',
-                '.ingredients-item',
+                "li.ingredient",
+                ".recipe-ingredients li",
+                ".wprm-recipe-ingredient",
+                ".tasty-recipes-ingredients li",
+                ".ingredients-item",
                 '[itemprop="recipeIngredient"]',
-                '.structured-ingredients__list-item'
+                ".structured-ingredients__list-item"
             ];
 
             for (const selector of selectors) {
@@ -61,7 +69,6 @@ async function fetchRecipe(url) {
         return ingredients.length > 0
             ? { title: url, ingredients }
             : { title: url, ingredients: ["No ingredients found"] };
-
     } catch (error) {
         console.error(`Error fetching recipe from ${url}:`, error.message);
         return { title: "Failed to fetch", ingredients: ["Error fetching recipe data"] };
