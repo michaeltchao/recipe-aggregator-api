@@ -1,50 +1,26 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
-const chromium = require("@sparticuz/chromium");
-const puppeteer = require("puppeteer-core");
+
+const SPOONACULAR_API_KEY = "9b42a968ad3d4188942dc950d8783954"; // Replace this with your real API key
 
 async function fetchRecipe(url) {
     try {
         let ingredients = [];
 
         if (url.includes("foodnetwork.com")) {
-            console.log("Using Puppeteer for:", url);
+            console.log("Using Spoonacular API for:", url);
 
-            // Ensure Chromium is launched correctly
-            const executablePath = await chromium.executablePath();
-
-            const browser = await puppeteer.launch({
-                args: [
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-gpu",
-                    "--single-process"
-                ],
-                executablePath: executablePath,
-                headless: "new"
+            const response = await axios.get(`https://api.spoonacular.com/recipes/extract`, {
+                params: {
+                    url: url,
+                    apiKey: SPOONACULAR_API_KEY
+                }
             });
 
-            const page = await browser.newPage();
+            if (response.data.extendedIngredients) {
+                ingredients = response.data.extendedIngredients.map(ing => ing.original);
+            }
 
-            // Set User-Agent to avoid detection
-            await page.setUserAgent(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            );
-
-            // Navigate to the page & wait
-            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-
-            // Debug: Take a screenshot to check if Food Network loads
-            await page.screenshot({ path: "/tmp/foodnetwork.png" });
-
-            // Extract ingredients
-            ingredients = await page.evaluate(() => {
-                return Array.from(document.querySelectorAll(".ingredients-item"))
-                    .map(el => el.innerText.trim());
-            });
-
-            await browser.close();
         } else {
             console.log("Using Axios for:", url);
 
@@ -79,19 +55,16 @@ async function fetchRecipe(url) {
             }
         }
 
-        if (ingredients.length === 0) {
-            console.log(`No ingredients found for: ${url}`);
-            return { title: url, ingredients: ["No ingredients found"] };
-        }
-
-        console.log(`✅ Successfully fetched ingredients for: ${url}`);
-        return { title: url, ingredients };
+        return ingredients.length > 0
+            ? { title: url, ingredients }
+            : { title: url, ingredients: ["No ingredients found"] };
 
     } catch (error) {
         console.error(`❌ Error fetching recipe from ${url}:`, error.message);
         return { title: "Failed to fetch", ingredients: ["Error fetching recipe data"] };
     }
 }
+
 
 
 
