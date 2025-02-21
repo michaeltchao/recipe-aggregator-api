@@ -8,13 +8,13 @@ async function fetchRecipe(url) {
         let ingredients = [];
 
         if (url.includes("foodnetwork.com")) {
-            console.log("Using Puppeteer for:", url);
+            console.log("Using Chromium for:", url);
 
-            // Launch Puppeteer with custom Chromium
+            // Launch Puppeteer using @sparticuz/chromium (Prebuilt for Vercel)
             const browser = await puppeteer.launch({
                 args: chromium.args,
                 executablePath: await chromium.executablePath(),
-                headless: true
+                headless: "new"
             });
 
             const page = await browser.newPage();
@@ -25,7 +25,7 @@ async function fetchRecipe(url) {
             );
 
             // Navigate to the page & wait
-            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+            await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
 
             // Extract ingredients
             ingredients = await page.evaluate(() => {
@@ -81,6 +81,7 @@ async function fetchRecipe(url) {
         return { title: "Failed to fetch", ingredients: ["Error fetching recipe data"] };
     }
 }
+
 
 module.exports = async (req, res) => {
     const { links } = req.body;
