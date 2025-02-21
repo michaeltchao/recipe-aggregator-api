@@ -1,3 +1,6 @@
+const axios = require('axios');
+const cheerio = require('cheerio');
+
 module.exports = async (req, res) => {
     if (req.method !== "POST") {
         return res.status(405).json({ error: "Method Not Allowed" });
@@ -9,18 +12,33 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: "Invalid request format" });
         }
 
-        // Simulating fetching recipe data
-        const results = links.map(url => ({
-            title: "Sample Recipe",
-            ingredients: [
-                "2 onions",
-                "3 cloves garlic",
-                "1 cup flour",
-                "1/2 tsp salt",
-                "1/4 tsp black pepper",
-                "1 tbsp olive oil"
-            ]
-        }));
+        // Function to scrape recipe ingredients from a URL
+        async function fetchRecipe(url) {
+            try {
+                const response = await axios.get(url);
+                const html = response.data;
+                const $ = cheerio.load(html);
+
+                let ingredients = [];
+
+                // Look for common ingredient selectors
+                $('li.ingredient, .recipe-ingredients li, .wprm-recipe-ingredient').each((i, el) => {
+                    ingredients.push($(el).text().trim());
+                });
+
+                if (ingredients.length === 0) {
+                    return { title: "Unknown Recipe", ingredients: ["No ingredients found"] };
+                }
+
+                return { title: $("title").text(), ingredients };
+            } catch (error) {
+                console.error(`Error fetching recipe from ${url}:`, error);
+                return { title: "Failed to fetch", ingredients: ["Error fetching recipe data"] };
+            }
+        }
+
+        // Fetch all recipes in parallel
+        const results = await Promise.all(links.map(url => fetchRecipe(url)));
 
         let consolidatedIngredients = {};
         results.forEach(recipe => {
