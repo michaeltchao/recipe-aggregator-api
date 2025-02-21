@@ -12,9 +12,14 @@ async function fetchRecipe(url) {
 
             // Launch Puppeteer with Chrome AWS Lambda
             const browser = await puppeteer.launch({
-                args: chromium.args,
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--single-process"
+                ],
                 executablePath: await chromium.executablePath,
-                headless: chromium.headless
+                headless: true
             });
 
             const page = await browser.newPage();
@@ -23,7 +28,9 @@ async function fetchRecipe(url) {
             await page.setUserAgent(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             );
-            await page.goto(url, { waitUntil: "domcontentloaded" });
+
+            // Navigate to the page & wait
+            await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
 
             // Extract ingredients
             ingredients = await page.evaluate(() => {
@@ -66,11 +73,16 @@ async function fetchRecipe(url) {
             }
         }
 
-        return ingredients.length > 0
-            ? { title: url, ingredients }
-            : { title: url, ingredients: ["No ingredients found"] };
+        if (ingredients.length === 0) {
+            console.log(`No ingredients found for: ${url}`);
+            return { title: url, ingredients: ["No ingredients found"] };
+        }
+
+        console.log(`✅ Successfully fetched ingredients for: ${url}`);
+        return { title: url, ingredients };
+
     } catch (error) {
-        console.error(`Error fetching recipe from ${url}:`, error.message);
+        console.error(`❌ Error fetching recipe from ${url}:`, error.message);
         return { title: "Failed to fetch", ingredients: ["Error fetching recipe data"] };
     }
 }
