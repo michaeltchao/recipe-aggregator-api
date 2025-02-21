@@ -10,11 +10,19 @@ async function fetchRecipe(url) {
         if (url.includes("foodnetwork.com")) {
             console.log("Using Puppeteer for:", url);
 
-            // Launch Puppeteer with custom Chromium
+            // Ensure Chromium is launched correctly
+            const executablePath = await chromium.executablePath();
+
             const browser = await puppeteer.launch({
-                args: chromium.args,
-                executablePath: await chromium.executablePath(),
-                headless: true
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--single-process"
+                ],
+                executablePath: executablePath,
+                headless: "new"
             });
 
             const page = await browser.newPage();
@@ -25,7 +33,7 @@ async function fetchRecipe(url) {
             );
 
             // Navigate to the page & wait
-            await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
 
             // Debug: Take a screenshot to check if Food Network loads
             await page.screenshot({ path: "/tmp/foodnetwork.png" });
@@ -84,6 +92,7 @@ async function fetchRecipe(url) {
         return { title: "Failed to fetch", ingredients: ["Error fetching recipe data"] };
     }
 }
+
 
 
 
