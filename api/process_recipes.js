@@ -1,5 +1,3 @@
-// Trigger redeployment - testing fix
-
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -17,24 +15,41 @@ module.exports = async (req, res) => {
         // Function to scrape recipe ingredients from a URL
         async function fetchRecipe(url) {
             try {
-                const response = await axios.get(url);
+                const response = await axios.get(url, {
+                    headers: {
+                        "User-Agent": "Mozilla/5.0"
+                    }
+                });
                 const html = response.data;
                 const $ = cheerio.load(html);
 
                 let ingredients = [];
 
-                // Look for common ingredient selectors
-                $('li.ingredient, .recipe-ingredients li, .wprm-recipe-ingredient').each((i, el) => {
-                    ingredients.push($(el).text().trim());
-                });
+                // Common ingredient selectors for various websites
+                const selectors = [
+                    'li.ingredient',                  // General
+                    '.recipe-ingredients li',        // Some recipe sites
+                    '.wprm-recipe-ingredient',       // WordPress recipe plugin
+                    '.tasty-recipes-ingredients li', // Tasty plugin
+                    '.ingredients-item',             // Food Network
+                    '[itemprop="recipeIngredient"]', // Schema.org format
+                    '.structured-ingredients__list-item' // Some custom formats
+                ];
+
+                for (const selector of selectors) {
+                    $(selector).each((i, el) => {
+                        ingredients.push($(el).text().trim());
+                    });
+                    if (ingredients.length > 0) break; // Stop if we found ingredients
+                }
 
                 if (ingredients.length === 0) {
-                    return { title: "Unknown Recipe", ingredients: ["No ingredients found"] };
+                    return { title: $("title").text(), ingredients: ["No ingredients found"] };
                 }
 
                 return { title: $("title").text(), ingredients };
             } catch (error) {
-                console.error(`Error fetching recipe from ${url}:`, error);
+                console.error(`Error fetching recipe from ${url}:`, error.message);
                 return { title: "Failed to fetch", ingredients: ["Error fetching recipe data"] };
             }
         }
@@ -57,7 +72,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ingredients: output });
 
     } catch (error) {
-        console.error("Server Error:", error);
+        console.error("Server Error:", error.message);
         return res.status(500).json({ error: "Internal Server Error" });
     }
 };
