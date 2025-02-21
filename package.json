@@ -1,0 +1,10 @@
+{
+  "name": "recipe-aggregator-api",
+  "version": "1.0.0",
+  "description": "A serverless function to extract and consolidate recipe ingredients",
+  "main": "api/process_recipes.js",
+  "dependencies": {
+    "axios": "^1.6.1",
+    "cheerio": "^1.0.0-rc.12"
+  }
+}
